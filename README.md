@@ -1,1 +1,29 @@
 # Smart contracts for Fantom Artion Marketplace
+
+```
+cipherz@cipherz-razer:~/projects/ir/artion/Artion-Contracts$ npx hardhat run scripts/scripts2/deploy_all.js --network testnet
+network:  testnet
+Deployer's address:  0x851c04b2c8CC4b3af6c886EA7cc4D326ffAEFe5A
+FantomArtion deployed at 0x4fa743D3144A769920c8104F0F1220042a124297
+ProxyAdmin deployed to: 0x50eAF47530E0731111b76e565Bd818B69de0DAb0
+FantomMarketplace deployed to: 0x831EA8a593C77c83483D45b80003BD575096cCF4
+Marketplace Proxy deployed at  0xa827b98eaDD9c53474739915AAA6eD8D529e7536
+Marketplace Proxy initialized
+FantomBundleMarketplace deployed to: 0x0D4d20eB19ed35a35E9eE2Eff91FCaE5D2fC366E
+Bundle Marketplace Proxy deployed at  0x7983c6C7D8312df5FDC352811a0BBC8d68eCe986
+Bundle Marketplace Proxy initialized
+FantomAuction deployed to: 0x0f12D085B186d8d4323786EB646A25493684EF55
+Auction Proxy deployed at  0xE8bf8a9Dc998b36A46777Dd2f752C00149Bff092
+Auction Proxy initialized
+FantomNFTFactory deployed to: 0xeC5e93a882b8CB169A93db2dcb45539ec7ffF1F3
+FantomNFTFactoryPrivate deployed to: 0x83D7493882bD20Be2BF1f44f64f05CdF2359Ba5e
+FantomNFTTradable deployed to: 0xc715C855585e4d0d2c2AdAF85E94B0f9EdA0a77c
+FantomNFTTradablePrivate deployed to: 0xcF35eD04BdD5dDe825A51E3f0a2A03527f87edaa
+FantomTokenRegistry deployed to 0x600D1F8ED05Dc7CC748e37012Bc5a01999Efb069
+FantomAddressRegistry deployed to 0xe8eb15A44FfF06e0fCC098e34940db9163A157D1
+FantomPriceFeed deployed to 0xb62652D74751a0F74D8C335731ca1030ADfC7bd0
+FantomArtTradable deployed to: 0x219f0d26882427F9F0aBeEB077773693dB625fb5
+FantomArtTradablePrivate deployed to: 0xcfbD3e17BadF1bBD0456Dd57a13D984f54EdC12d
+FantomArtFactory deployed to: 0x3a8c3eA861Ca1Ffc709b27c5187562c298221776
+FantomArtFactoryPrivate deployed to: 0xbAb6e9e25aa7E8EcbF7E76277961C35a459D2307
+```

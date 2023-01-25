@@ -27,19 +27,14 @@ module.exports = {
   },
   networks: {
     mainnet: {
-      url: `https://rpcapi.fantom.network`,
+      url: `https://fantom-mainnet.public.blastapi.io	`,
       chainId: 250,
       accounts: [`0x${PRIVATE_KEY}`]
     },
     testnet: {
-      url: `https://rpcapi-tracing.testnet.fantom.network`,
+      url: `https://fantom-testnet.public.blastapi.io`,
       chainId: 4002,
       accounts: [`0x${PRIVATE_KEY}`]
-    },
-    ropsten: {
-      url: `https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
-      chainId: 3,
-      accounts: [`0x${PRIVATE_KEY}`],
     },
     coverage: {
       url: 'http://localhost:8555',
