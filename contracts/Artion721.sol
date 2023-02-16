@@ -1,10 +1,9 @@
 /**
- *Submitted for verification at FtmScan.com on 2021-11-23
+ *Submitted for verification at Etherscan.io on 2022-02-01
 */
 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
-// SPDX-License-Identifier: GPL-3.0
 
 /**
  * @dev Interface of the ERC165 standard, as defined in the
@@ -1068,6 +1067,7 @@ abstract contract Ownable is Context {
 // CAUTION
 // This version of SafeMath should only be used with Solidity 0.8 or later,
 // because it relies on the compiler's built in overflow checks.
+
 /**
  * @dev Wrappers over Solidity's arithmetic operations.
  *
@@ -1288,7 +1288,121 @@ library SafeMath {
 }
 
 
-contract Artion is ERC721URIStorage, Ownable {
+interface IERC2981Royalties is IERC165 {
+    /// ERC165 bytes to add to interface array - set in parent contract
+    /// implementing this standard
+    ///
+    /// bytes4(keccak256("royaltyInfo(uint256,uint256)")) == 0x2a55205a
+    /// bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
+    /// _registerInterface(_INTERFACE_ID_ERC2981);
+
+    /// @notice Called with the sale price to determine how much royalty
+    //          is owed and to whom.
+    /// @param _salePrice - the sale price of the NFT asset specified by _tokenId
+    /// @return receiver - address of who should be sent the royalty payment
+    /// @return royaltyAmount - the royalty payment amount for _salePrice
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
+        external
+        view
+        returns (address receiver, uint256 royaltyAmount);
+}
+
+
+interface IERC2981RoyaltySetter is IERC165 {
+    // bytes4(keccak256('setDefaultRoyalty(address,uint16)')) == 0x4331f639
+    // bytes4(keccak256('setTokenRoyalty(uint256,address,uint16)')) == 0x78db6c53
+    // => Interface ID = 0x4331f639 ^ 0x78db6c53 == 0x3bea9a6a
+
+    // Set collection-wide default royalty.
+    function setDefaultRoyalty(address _receiver, uint16 _royaltyPercent) external;
+
+    // Set royalty for the given token.
+    function setTokenRoyalty(uint256 _tokenId, address _receiver, uint16 _royaltyPercent) external;
+}
+
+
+/// @dev This is a contract used to add ERC2981 support to ERC721 and 1155
+abstract contract ERC2981 is ERC165, IERC2981Royalties, IERC2981RoyaltySetter {
+    struct RoyaltyInfo {
+        address recipient;
+        uint24 amount;
+    }
+
+    /// @inheritdoc	ERC165
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(IERC2981Royalties).interfaceId ||
+            interfaceId == type(IERC2981RoyaltySetter).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
+}
+
+
+/// @dev This is a contract used to add ERC2981 support to ERC721 and 1155
+abstract contract ERC2981PerTokenRoyalties is ERC2981 {
+    // map of known royalties; tokenID => RoyaltyInfo; #0 => collection-wide royalty
+    mapping(uint256 => RoyaltyInfo) internal _royalties;
+
+    /// @dev Sets token royalties
+    /// @param _tokenId the token id for which we register the royalties
+    /// @param _recipient recipient of the royalties
+    /// @param _value percentage (using 2 decimals - 10000 = 100, 0 = 0)
+    function _setTokenRoyalty(
+        uint256 _tokenId,
+        address _recipient,
+        uint256 _value
+    ) internal {
+        require(_value <= 10000, "ERC2981PerTokenRoyalties: Royalty Too high");
+
+        RoyaltyInfo memory royalty = _royalties[_tokenId];
+        require(royalty.recipient == address(0), "ERC2981PerTokenRoyalties: Royalty already set");
+
+        _royalties[_tokenId] = RoyaltyInfo(_recipient, uint24(_value));
+    }
+
+    /// @dev Sets a new royalty recipient for the given tokenID. Only existing recipient can make the change.
+    function setTokenRoyaltyRecipient(uint256 _tokenId, address _recipient) external {
+        // the royalty must be set and the caller must be the current recipient of the royalty
+        RoyaltyInfo memory royalty = _royalties[_tokenId];
+        require(royalty.recipient != address(0) && royalty.recipient == msg.sender, "ERC2981PerTokenRoyalties: Current recipient only");
+
+        _royalties[_tokenId].recipient = _recipient;
+    }
+
+    /// @dev Sets collection-wide royalty
+    /// @param _recipient recipient of the royalties
+    /// @param _value percentage (using 2 decimals - 10000 = 100, 0 = 0)
+    function _setDefaultRoyalty(address _recipient, uint256 _value) internal {
+        require(_value <= 10000, "ERC2981PerTokenRoyalties: Royalty too high");
+        _royalties[0] = RoyaltyInfo(_recipient, uint24(_value));
+    }
+
+    /// @dev Provides value and recipient for a royalty of the given token and for the given price.
+    /// @param _tokenId the token id fir which we register the royalties
+    /// @param _salePrice The base amount used to calculate the royalty.
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view override returns (address _receiver, uint256 _royaltyAmount) {
+        RoyaltyInfo memory royalty = _royalties[_tokenId];
+
+        // fallback to collection-wide royalty, if set
+        if (royalty.recipient == address(0)) {
+            royalty = _royalties[0];
+        }
+
+        // do the math and return results
+        _receiver = royalty.recipient;
+        _royaltyAmount = (_salePrice * royalty.amount) / 10000;
+        return (_receiver, _royaltyAmount);
+    }
+}
+
+
+contract Artion721 is ERC721URIStorage, ERC2981PerTokenRoyalties, Ownable {
     using SafeMath for uint256;
 
     /// @dev Events of the contract
@@ -1298,6 +1412,7 @@ contract Artion is ERC721URIStorage, Ownable {
         string tokenUri,
         address minter
     );
+
     event UpdatePlatformFee(uint256 platformFee);
     event UpdatePlatformFeeRecipient(address payable platformFeeRecipient);
 
@@ -1310,15 +1425,15 @@ contract Artion is ERC721URIStorage, Ownable {
     /// @notice Platform fee
     uint256 public platformFee;
 
-    /// @notice Platform fee receipient
-    address payable public feeReceipient;
+    /// @notice Platform fee recipient
+    address payable public feeRecipient;
 
     /// @notice Contract constructor
-    constructor(address payable _feeRecipient, uint256 _platformFee)
-        ERC721("ART", "Artion")
+    constructor(string memory _symbol, string memory _name, address payable _feeRecipient, uint256 _platformFee)
+        ERC721(_symbol, _name)
     {
         platformFee = _platformFee;
-        feeReceipient = _feeRecipient;
+        feeRecipient = _feeRecipient;
     }
 
     /**
@@ -1327,11 +1442,12 @@ contract Artion is ERC721URIStorage, Ownable {
      @param _tokenUri URI for the token being minted
      @return uint256 The token ID of the token that was minted
      */
-    function mint(address _beneficiary, string calldata _tokenUri)
-        external
-        payable
-        returns (uint256)
-    {
+    function mint(
+        address _beneficiary,
+        string calldata _tokenUri,
+        address _royaltyRecipient,
+        uint256 _royaltyValue
+    ) external payable returns (uint256) {
         require(msg.value >= platformFee, "Insufficient funds to mint.");
 
         // Valid args
@@ -1344,19 +1460,23 @@ contract Artion is ERC721URIStorage, Ownable {
         _safeMint(_beneficiary, tokenId);
         _setTokenURI(tokenId, _tokenUri);
 
+        // set royalty, if the user requested the royalty to be set
+        if (_royaltyRecipient != address(0)) {
+            _setTokenRoyalty(tokenId, _royaltyRecipient, _royaltyValue);
+        }
+
         // Send FTM fee to fee recipient
-        feeReceipient.transfer(msg.value);
+        feeRecipient.transfer(msg.value);
 
         // Associate garment designer
         creators[tokenId] = _msgSender();
 
         emit Minted(tokenId, _beneficiary, _tokenUri, _msgSender());
-
         return tokenId;
     }
 
     /**
-     @notice Burns a DigitalaxGarmentNFT, releasing any composed 1155 tokens held by the token itself
+     @notice Burns a NFT
      @dev Only the owner or an approved sender can call this method
      @param _tokenId the token ID to burn
      */
@@ -1364,7 +1484,7 @@ contract Artion is ERC721URIStorage, Ownable {
         address operator = _msgSender();
         require(
             ownerOf(_tokenId) == operator || isApproved(_tokenId, operator),
-            "Only garment owner or approved"
+            "Only owner or approved"
         );
 
         // Destroy token mappings
@@ -1382,6 +1502,20 @@ contract Artion is ERC721URIStorage, Ownable {
             _receiverTokenId := calldataload(_index)
         }
         return _receiverTokenId;
+    }
+
+    // Set collection-wide default royalty.
+    function setDefaultRoyalty(address _receiver, uint16 _royaltyPercent) external override onlyOwner {
+        _setDefaultRoyalty(_receiver, _royaltyPercent);
+    }
+
+    // Set royalty for the given token.
+    function setTokenRoyalty(uint256 _tokenId, address _receiver, uint16 _royaltyPercent) external override {
+        // only token owner can make the change
+        address operator = _msgSender();
+        require(ownerOf(_tokenId) == operator || isApproved(_tokenId, operator), "Only owner or approved");
+
+        _setTokenRoyalty(_tokenId, _receiver, _royaltyPercent);
     }
 
     /////////////////
@@ -1428,7 +1562,7 @@ contract Artion is ERC721URIStorage, Ownable {
         external
         onlyOwner
     {
-        feeReceipient = _platformFeeRecipient;
+        feeRecipient = _platformFeeRecipient;
         emit UpdatePlatformFeeRecipient(_platformFeeRecipient);
     }
 
@@ -1453,5 +1587,16 @@ contract Artion is ERC721URIStorage, Ownable {
             _designer != address(0),
             "_assertMintingParamsValid: Designer is zero address"
         );
+    }
+
+    /// @inheritdoc	ERC165
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721, ERC2981)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }
