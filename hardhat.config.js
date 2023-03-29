@@ -26,27 +26,91 @@ task("add-token", "Add token to token registry")
   .addParam("token", "Token address", false, types.string)
   .setAction(async (taskArgs, hre) => {
     const { ethers } = hre;
-    const tokenRegistry = await hre.ethers.getContractAt("FantomTokenRegistry", "0x7f37c4f9c647DC1736f5Da761B7797c36BAa2A75");
+    const tokenRegistry = await hre.ethers.getContractAt(
+      "FantomTokenRegistry",
+      "0x7f37c4f9c647DC1736f5Da761B7797c36BAa2A75"
+    );
     const tx = await tokenRegistry.add(taskArgs.token);
     const receipt = await tx.wait();
-    console.log("Token removed from registry:", receipt);
+    console.log("Token added to registry:", receipt);
   });
 
-  task("deploy-artion", "deploy artion 721")
-  .setAction(async (taskArgs, hre) => {
+task("set-price-feed", "set oracle on price feed").setAction(
+  async (taskArgs, hre) => {
+    const { ethers } = hre;
+    const priceFeed = await hre.ethers.getContractAt(
+      "FantomPriceFeed",
+      "0x5De7a78bD519514dED63Ab91F51Fe0310b4b17E6"
+    );
+    const tx = await priceFeed.registerOracle(
+      "0xf1277d1Ed8AD466beddF92ef448A132661956621",
+      "0xe04676B9A9A2973BCb0D1478b5E1E9098BBB7f3D"
+    );
+    const receipt = await tx.wait();
+    console.log("registered price for token", receipt);
+  }
+);
+
+// deploy dai and usdc contracts
+task("deploy-dai-usdc", "deploy dai and usdc contracts").setAction(
+  async (taskArgs, hre) => {
     //deploy contract
     //get deployer account
     const [deployer] = await hre.ethers.getSigners();
-    const Artion721 = await hre.ethers.getContractFactory("Artion721");
-    const artion721 = await Artion721.deploy("CIPHERZ", "Default Collection for CipherZ", deployer.address, hre.ethers.utils.parseEther(".1"));
-    await artion721.deployed();
-    console.log("Artion721 deployed to:", artion721.address);
+    const Dai = await hre.ethers.getContractFactory("Dai");
+    const dai = await Dai.deploy();
+    await dai.deployed();
+    console.log("Dai deployed to:", dai.address);
+    const USDC = await hre.ethers.getContractFactory("Usdc");
+    const usdc = await USDC.deploy();
+    await usdc.deployed();
+    console.log("USDC deployed to:", usdc.address);
+  }
+);
 
-  }); 
+task("deploy-artion", "deploy artion 721").setAction(async (taskArgs, hre) => {
+  //deploy contract
+  //get deployer account
+  const [deployer] = await hre.ethers.getSigners();
+  const Artion721 = await hre.ethers.getContractFactory("Artion721");
+  const artion721 = await Artion721.deploy(
+    "IR",
+    "Default Collection for IR",
+    deployer.address,
+    hre.ethers.utils.parseEther(".1")
+  );
+  await artion721.deployed();
+  console.log("Artion721 deployed to:", artion721.address);
+});
+
+//mint nft
+task("mint-shoes-nft", "mint nft").setAction(async (taskArgs, hre) => {
+  const tokenUri =
+    "https://artion.mypinata.cloud/ipfs/QmNxEbKeyn5igQcnxqq8dfk6ebTaYtnDREEZTkVNHwDRLJ/";
+  const receiver = "0x75965652aC872E3A9fd3c9ad8E290473c23d763c";
+  const contract = "0x79d44a6EbB9E173BF8527D89c7cF568c6D8c483D";
+  const NFT = await hre.ethers.getContractFactory("FantomArtTradable"); //FantomArtTradable, FantomNFTTradable
+  const nft = await NFT.attach(contract);
+  for (i = 1; i <= 3; i++) {
+    const tx = await nft.mint(receiver, 1, tokenUri + i, {
+      value: hre.ethers.utils.parseEther("0.1"),
+    });
+    const receipt = await tx.wait();
+    console.log("NFT minted:", receipt.transactionHash);
+  }
+});
+
+// get tokenUri
+task("get-token-uri", "get tokenUri").setAction(async (taskArgs, hre) => {
+  const NFT = await hre.ethers.getContractFactory("FantomArtTradable"); //FantomArtTradable, FantomNFTTradable
+  const nft = await NFT.attach("0x79d44a6EbB9E173BF8527D89c7cF568c6D8c483D");
+  const tokenUri = await nft.uri("1");
+  console.log("Token URI:", tokenUri);
+});
 
 // Deploy the contract
-task("create-nft-collection", "create a new NFT collection")
-  .setAction(async (taskArgs, hre) => {
+task("create-nft-collection", "create a new NFT collection").setAction(
+  async (taskArgs, hre) => {
     const erc1155Info = {
       address: "0x3a8c3eA861Ca1Ffc709b27c5187562c298221776",
       name: "FantomArtFactory",
@@ -56,7 +120,7 @@ task("create-nft-collection", "create a new NFT collection")
       name: "FantomNFTFactory",
     };
 
-    const factoryInfo = erc721Info;
+    const factoryInfo = erc1155Info;
     const factory = await hre.ethers.getContractAt(
       factoryInfo.name,
       factoryInfo.address
@@ -70,8 +134,8 @@ task("create-nft-collection", "create a new NFT collection")
     const mintFee = await factory.mintFee();
     console.log("Mint fee: ", hre.ethers.utils.formatEther(mintFee));
 
-    const tx = await factory.createNFTContract("Mark", "MRK", {
-      value: hre.ethers.utils.parseEther("0.1")
+    const tx = await factory.createNFTContract("Fantasy", "FANTASY", {
+      value: hre.ethers.utils.parseEther("0.1"),
     });
     const receipt = await tx.wait();
     console.log("NFT contract deployed to:", receipt);
@@ -120,7 +184,8 @@ task("create-nft-collection", "create a new NFT collection")
     //   paraToken.address
     // );
     // console.log("Airdrop deployed to:", airdrop.address);
-  });
+  }
+);
 
 module.exports = {
   solidity: {
@@ -144,8 +209,8 @@ module.exports = {
       accounts: [`0x${PRIVATE_KEY}`],
     },
     testnet: {
-      url: `https://fantom-testnet.public.blastapi.io`,
-      chainId: 4002,
+      url: `https://polygon-mumbai.g.alchemy.com/v2/S2fsBdDO0wxUKFELcz-AOqwatw1eaWkF`,
+      chainId: 80001,
       accounts: [`0x${PRIVATE_KEY}`],
     },
     coverage: {
