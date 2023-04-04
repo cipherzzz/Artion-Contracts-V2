@@ -88,11 +88,11 @@ task("mint-shoes-nft", "mint nft").setAction(async (taskArgs, hre) => {
   const tokenUri =
     "https://artion.mypinata.cloud/ipfs/QmNxEbKeyn5igQcnxqq8dfk6ebTaYtnDREEZTkVNHwDRLJ/";
   const receiver = "0x75965652aC872E3A9fd3c9ad8E290473c23d763c";
-  const contract = "0x79d44a6EbB9E173BF8527D89c7cF568c6D8c483D";
-  const NFT = await hre.ethers.getContractFactory("FantomArtTradable"); //FantomArtTradable, FantomNFTTradable
+  const contract = "0x053901f1b1b18e9f0e6fe63b153ccef3042fc6b5";
+  const NFT = await hre.ethers.getContractFactory("FantomNFTTradable"); //FantomArtTradable, FantomNFTTradable
   const nft = await NFT.attach(contract);
   for (i = 1; i <= 3; i++) {
-    const tx = await nft.mint(receiver, 1, tokenUri + i, {
+    const tx = await nft.mint(receiver, tokenUri + i, {
       value: hre.ethers.utils.parseEther("0.1"),
     });
     const receipt = await tx.wait();
@@ -116,11 +116,11 @@ task("create-nft-collection", "create a new NFT collection").setAction(
       name: "FantomArtFactory",
     };
     const erc721Info = {
-      address: "0x172622F6749A72E10aEf096EACDFC4f812A15bfa",
+      address: "0x22ED03fc5d40e0a2cf4f21CBD0452E8B6f814a30",
       name: "FantomNFTFactory",
     };
 
-    const factoryInfo = erc1155Info;
+    const factoryInfo = erc721Info;
     const factory = await hre.ethers.getContractAt(
       factoryInfo.name,
       factoryInfo.address
